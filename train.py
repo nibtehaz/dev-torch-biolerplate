@@ -103,9 +103,7 @@ def main(args):
     best_loss = 10000000
 
     BEST_LOSSES = {}
-    for i in range(1000):
-        BEST_LOSSES[i] = 10000000
-
+    
     model_ema = None
     if args.model_ema:
         # Decay adjustment that aims to keep the decay independent of other hyper-parameters originally proposed at:
@@ -171,6 +169,8 @@ def main(args):
                 save_on_master(checkpoint, os.path.join(output_dir, "checkpoint.pth"))
                 
             epoch_step = epoch//10
+            if epoch_step not in BEST_LOSSES:
+                BEST_LOSSES[epoch_step] = 10000000
             if BEST_LOSSES[epoch_step] > val_loss:
                 print(f"Stage {epoch_step} loss improved to {val_loss} from {BEST_LOSSES[epoch_step]}")
                 BEST_LOSSES[epoch_step] = val_loss
