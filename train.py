@@ -169,6 +169,12 @@ def main(args):
                 print(f"loss improved to {val_loss}@{epoch} from {best_loss}")
                 best_loss = val_loss
                 save_on_master(checkpoint, os.path.join(output_dir, "checkpoint.pth"))
+                
+            epoch_step = epoch//10
+            if BEST_LOSSES[epoch_step] > val_loss:
+                print(f"Stage {epoch_step} loss improved to {val_loss} from {BEST_LOSSES[epoch_step]}")
+                BEST_LOSSES[epoch_step] = val_loss
+                save_on_master(checkpoint, os.path.join(output_dir, f"checkpoint_{epoch_step}.pth"))
 
 
     
