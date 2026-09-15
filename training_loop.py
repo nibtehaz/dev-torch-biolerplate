@@ -34,45 +34,56 @@ def run_epoch(model, data_loader, criterion, device, args, epoch, optimizer=None
 
             ### UNPACK BATCH AND MOVE TO DEVICE ###
 
-            x0 = batch[0].to(device)
-            x1 = batch[1].to(device)
-            x2 = batch[2].to(device)
+            for ky in batch:
+                if torch.is_tensor(batch[ky]):
+                    batch[ky] = batch[ky].to(device)
             
-            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
-                output = model(x0, x1)                 
-                loss_dict = criterion(output, x2)
+            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                output = model(batch)
+                loss_dict = criterion(output, batch)
 
-                metrics = compute_metrics_torch(x2, output)
+                metrics = compute_metrics_torch(output, batch)
                 
             
             # 4. Backward Pass (Only if training)
             if is_train:
-                
-                loss = loss_dict['loss'] / args.grad_accum_iter                    
+                loss = loss_dict['loss'] / args.grad_accum_iter
                 loss.backward()
 
-                if args.clip_grad_norm is not None:            
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad_norm)
+                is_accum_step = ((batch_idx + 1) % args.grad_accum_iter == 0) or ((batch_idx + 1) == len(data_loader))
 
-                if ((batch_idx+1)%args.grad_accum_iter==0) or ((batch_idx+1)==len(data_loader)):
+                if is_accum_step:
+                    
+                    if args.clip_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad_norm)
+                    
                     optimizer.step()
-                    optimizer.zero_grad()
+                    optimizer.zero_grad(set_to_none=True)
 
-                    torch.cuda.empty_cache()
-                    gc.collect()
+                    # Optional to save memory with time trade-off
+                    #torch.cuda.empty_cache()
+                    #gc.collect()
 
+            
             for ky in loss_dict:
-                loss_dict[ky] = loss_dict[ky].detach().to('cpu').item()
+                if torch.is_tensor(loss_dict[ky])
+                    loss_dict[ky] = loss_dict[ky].detach().item()
                 metric_logger.meters[ky].update(loss_dict[ky], n=args.batch_size)
 
             for ky in metrics:
-                metrics[ky] = metrics[ky].detach().to('cpu').item()
+                if torch.is_tensor(metrics[ky])
+                    metrics[ky] = metrics[ky].detach()..item()
                 metric_logger.meters[ky].update(metrics[ky], n=args.batch_size)
             
-            x0 = x0.to('cpu')
-            x1 = x1.to('cpu')
-            x2 = x2.to('cpu')
-            output = output.to('cpu')
+            """
+            #Optional to save memory with time trade-off
+            for ky in batch:
+                if torch.is_tensor(batch[ky]):
+                    batch[ky] = batch[ky].to(device)
+            for ky in output:
+                if torch.is_tensor(output[ky]):
+                    output[ky] = output[ky].to(device)
+            """
 
 
 

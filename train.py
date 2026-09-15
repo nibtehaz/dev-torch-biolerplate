@@ -1,5 +1,3 @@
-
-
 '''
 CUDA_VISIBLE_DEVICES=1,2 python3 -m torch.distributed.run \
     --nnodes=2 \
@@ -58,7 +56,7 @@ def main(args):
 
     # PUT MODEL CODE HERE
 
-    model = MODEL()
+    model = Model()
     model.to(device)
     print('Model loaded')
 
@@ -133,6 +131,8 @@ def main(args):
     
 
     for epoch in range(args.start_epoch, args.epochs):
+
+        criterion.update_weights(epoch)
         
         if args.distributed:
             train_sampler.set_epoch(epoch)
@@ -143,10 +143,7 @@ def main(args):
         #if(epoch<lr_scheduler.T_max):
         lr_scheduler.step()
 
-        val_loss = run_epoch(model, val_dataloader, criterion, device, args, epoch, optimizer=None, is_train=False)
-
-        
-                        
+        val_loss = run_epoch(model, val_dataloader, criterion, device, args, epoch, optimizer=None, is_train=False)                        
 
         if model_ema:
             val_loss = run_epoch(model_ema, val_dataloader, criterion, device, args, optimizer=None, is_train=False)
